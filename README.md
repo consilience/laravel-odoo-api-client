@@ -35,10 +35,15 @@ $client->search('res.partner', $criteria, 0, 10, 'id desc')->value()->me['array'
 $client->searchCount('res.partner', $criteria);
 ```
 
-# TOOD
+# TODO
 
-An elegant way to parse the results, as the `Value` objects can be
-a little cumbersome.
-For example, we know the `search()` result will be an array of
-integer model instance IDs, so a simple array of IDs can be returned,
-rather than a Value array containing Value integer objects.
+* An elegant way to parse the results, as the `Value` objects can be
+  a little cumbersome.
+  For example, we know the `search()` result will be an array of
+  integer model instance IDs, so a simple array of IDs can be returned,
+  rather than a Value array containing Value integer objects.
+* Docs on config (this package supports multiple clients, so can connect
+  to multiple Odoo instances or as multiple users at the same time).
+* Docs on installation (has a auto discovered provider and facade).
+* The write functions are not written yet (create, write and unlink).
+* The search_read method is not supported yet.
