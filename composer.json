@@ -1,0 +1,30 @@
+{
+    "name": "consilience/laravel-odoo-api-client",
+    "description": "Laravel provider for the Odoo API",
+    "authors": [
+        {
+            "name": "Jason Judge",
+            "email": "jason@consil.co.uk"
+        }
+    ],
+    "license": "MIT",
+    "require": {
+        "php": ">= 7.0.0",
+        "phpxmlrpc/phpxmlrpc": "~4.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Consilience\\OdooApi\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Consilience\\OdooApi\\OdooServiceProvider"
+            ],
+            "aliases": {
+                "OdooApi": "Consilience\\OdooApi\\OdooFacade"
+            }
+        }
+    }
+}
