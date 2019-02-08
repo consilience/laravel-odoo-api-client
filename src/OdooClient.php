@@ -286,6 +286,58 @@ class OdooClient
     //
 
     /**
+     * Get the ERP internal resource ID for a given external ID.
+     *
+     * @param string $externalId either "name" or "module.name"
+     * @param string $module optional, but recommended
+     * @return int|null
+     */
+    public function getResourceId(string $externalId, string $model = null)
+    {
+        $criteria = [];
+
+        if ($model !== null) {
+            $criteria[] = ['model', '=', 'res.partner'];
+        }
+
+        if (strpos($externalId, '.') !== false) {
+            list ($module, $name) = explode('.', $externalId, 2);
+
+            $criteria[] = ['module', '=', $module];
+        } else {
+            $name = $externalId;
+        }
+
+        $criteria[] = ['name', '=', $name];
+
+        $result = $this->search('ir.model.data', $criteria);
+        $irModelDataIds = $this->valueToNative($result->value());
+        $irModelDataId = collect($irModelDataIds)->first();
+
+        if ($irModelDataId === null) {
+            // No matches found, so give up now.
+            return;
+        }
+
+        // Now read the full record to get the resource ID.
+
+        $irModelDataArray = $this->valueToNative(
+            $this->read('ir.model.data', [$irModelDataId])->value()
+        );
+        $irModelData = collect($irModelDataArray)->first();
+
+        if ($irModelData === null) {
+            // We could not find the record.
+            // (We really should have, since we just looked it up)
+            return;
+        }
+
+        // Return the resource ID.
+
+        return $irModelData['res_id'];
+    }
+
+    /**
      * Return a message with the base parameters for any object call.
      * Identified the login credentials, model and action.
      *
