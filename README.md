@@ -2,14 +2,41 @@
 
 Tested against Laravel 5.7 and Odoo 7 _(OpenERP 7)_.
 
-More docs to do, examples to write, and the write interfaces to produce.
+# Installation
+
+Through composer:
+
+    composer require consilience/laravel-odoo-api-client
+
+Note: pending release to packagist, the following entry in `composer.json`
+is needed to locate this package:
+
+```json
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/consilience/laravel-odoo-api-client.git"
+        }
+        ...
+    ]
+    ...
+```
+
+# Publishing the Configuration
+
+Publish `config\odoo-api.php` using the Laravel artisan command:
+
+    artisan vendor:publish --provider="Consilience\OdooApi\OdooServiceProvider"
+
+A sample set of entries for `.env` can be found in `.env.example`.
 
 # Example
 
 A very simple example:
 
 ```php
-// The facade.
+
+// This facade is auto-discoverec for Laravel 5.6+
 
 use OdooApi;
 
