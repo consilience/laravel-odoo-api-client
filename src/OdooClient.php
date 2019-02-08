@@ -196,14 +196,8 @@ class OdooClient
         $limit = 100,
         $order = ''
     ) {
-        $msg = new Request('execute');
+        $msg = $this->getBaseObjectRequest($modelName, 'search');
 
-        $msg->addParam($this->stringValue($this->database));
-        $msg->addParam($this->intValue($this->getUserId()));
-        $msg->addParam($this->stringValue($this->password));
-
-        $msg->addParam($this->stringValue($modelName));
-        $msg->addParam($this->stringValue('search'));
         $msg->addParam($this->objectifyArray($criteria));
 
         $msg->addParam($this->intValue($offset)); // offset
@@ -223,14 +217,8 @@ class OdooClient
         string $modelName,
         array $criteria = []
     ) {
-        $msg = new Request('execute');
+        $msg = $this->getBaseObjectRequest($modelName, 'search_count');
 
-        $msg->addParam($this->stringValue($this->database));
-        $msg->addParam($this->intValue($this->getUserId()));
-        $msg->addParam($this->stringValue($this->password));
-
-        $msg->addParam($this->stringValue($modelName));
-        $msg->addParam($this->stringValue('search_count'));
         $msg->addParam($this->objectifyArray($criteria));
 
         $response = $this->getXmlRpcClient('object')->send($msg);
@@ -249,17 +237,11 @@ class OdooClient
         $limit = 100,
         $order = ''
     ) {
-        $msg = new Request('execute');
+        $msg = $this->getBaseObjectRequest($modelName, 'search_read');
 
-        $msg->addParam($this->stringValue($this->database));
-        $msg->addParam($this->intValue($this->getUserId()));
-        $msg->addParam($this->stringValue($this->password));
-
-        $msg->addParam($this->stringValue($modelName));
-        $msg->addParam($this->stringValue('search_read'));
         $msg->addParam($this->objectifyArray($criteria));
 
-        // To be fixed when we have Odoo 8 available.
+        // To be fixed when we have Odoo 8 available to develop against.
 
         //$msg->addParam($this->stringValue('id'));
 
@@ -280,14 +262,8 @@ class OdooClient
         string $modelName,
         array $criteria = []
     ) {
-        $msg = new Request('execute');
+        $msg = $this->getBaseObjectRequest($modelName, 'read');
 
-        $msg->addParam($this->stringValue($this->database));
-        $msg->addParam($this->intValue($this->getUserId()));
-        $msg->addParam($this->stringValue($this->password));
-
-        $msg->addParam($this->stringValue($modelName));
-        $msg->addParam($this->stringValue('read'));
         $msg->addParam($this->objectifyArray($criteria));
 
         $response = $this->getXmlRpcClient('object')->send($msg);
@@ -296,8 +272,37 @@ class OdooClient
     }
 
     //
-    // TODO: create write unlink
+    // TODO: actions to implement = create write unlink
     //
+
+    /**
+     * Return a message with the base parameters for any object call.
+     * Identified the login credentials, model and action.
+     *
+     * @param string|null $modelName
+     * @param string|null $action will be used only the $modelName is provided
+     * @return Request
+     */
+    public function getBaseObjectRequest(
+        string $modelName = null,
+        string $action = null
+    ) {
+        $msg = new Request('execute');
+
+        $msg->addParam($this->stringValue($this->database));
+        $msg->addParam($this->intValue($this->getUserId()));
+        $msg->addParam($this->stringValue($this->password));
+
+        if ($modelName !== null) {
+            $msg->addParam($this->stringValue($modelName));
+
+            if ($action !== null) {
+                $msg->addParam($this->stringValue($action));
+            }
+        }
+
+        return $msg;
+    }
 
     /**
      * Walk through the criteria array and convert scalar values to
@@ -337,7 +342,7 @@ class OdooClient
         }
 
         // Map to an array or a struct, depending on whether a numeric
-        // array or associative array.
+        // keyed array or an associative array is to be encoded.
 
         if ($item === [] || array_keys($item) === range(0, count($item) - 1)) {
             return $this->arrayValue($item);
