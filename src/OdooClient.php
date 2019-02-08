@@ -9,6 +9,7 @@ namespace Consilience\OdooApi;
 use PhpXmlRpc\Client;
 use PhpXmlRpc\Request;
 use PhpXmlRpc\Value;
+use PhpXmlRpc\Response;
 
 use Exception;
 
@@ -188,6 +189,13 @@ class OdooClient
     /**
      * Example:
      * OdooApi::getClient()->search('res.partner', $criteria, 0, 10)
+     *
+     * @param string $modelName example res.partner
+     * @param array $criteria nested array of search criteria (Polish notation logic)
+     * @param int $offset
+     * @param int $limit
+     * @param string $order comma-separated list of fields
+     * @return Response
      */
     public function search(
         string $modelName,
@@ -198,11 +206,11 @@ class OdooClient
     ) {
         $msg = $this->getBaseObjectRequest($modelName, 'search');
 
-        $msg->addParam($this->objectifyArray($criteria));
+        $msg->addParam($this->nativeToValue($criteria));
 
-        $msg->addParam($this->intValue($offset)); // offset
-        $msg->addParam($this->intValue($limit));  // limit
-        $msg->addParam($this->stringValue($order)); // order, CSV list
+        $msg->addParam($this->intValue($offset));
+        $msg->addParam($this->intValue($limit));
+        $msg->addParam($this->stringValue($order));
 
         $response = $this->getXmlRpcClient('object')->send($msg);
 
@@ -212,6 +220,8 @@ class OdooClient
     /**
      * Example:
      * OdooApi::getClient()->search_count('res.partner', $criteria)
+     *
+     * @return integer
      */
     public function searchCount(
         string $modelName,
@@ -219,7 +229,7 @@ class OdooClient
     ) {
         $msg = $this->getBaseObjectRequest($modelName, 'search_count');
 
-        $msg->addParam($this->objectifyArray($criteria));
+        $msg->addParam($this->nativeToValue($criteria));
 
         $response = $this->getXmlRpcClient('object')->send($msg);
 
@@ -239,7 +249,7 @@ class OdooClient
     ) {
         $msg = $this->getBaseObjectRequest($modelName, 'search_read');
 
-        $msg->addParam($this->objectifyArray($criteria));
+        $msg->addParam($this->nativeToValue($criteria));
 
         // To be fixed when we have Odoo 8 available to develop against.
 
@@ -264,7 +274,7 @@ class OdooClient
     ) {
         $msg = $this->getBaseObjectRequest($modelName, 'read');
 
-        $msg->addParam($this->objectifyArray($criteria));
+        $msg->addParam($this->nativeToValue($criteria));
 
         $response = $this->getXmlRpcClient('object')->send($msg);
 
@@ -308,7 +318,7 @@ class OdooClient
      * Walk through the criteria array and convert scalar values to
      * XML-RPC objects, and nested arrays to array and struct objects.
      */
-    public function objectifyArray($item)
+    public function nativeToValue($item)
     {
         // If a scalar, then map to the appropriate object.
 
@@ -338,7 +348,7 @@ class OdooClient
         // If an array, then deal with the children first.
 
         foreach ($item as $key => $element) {
-            $item[$key] = $this->objectifyArray($element);
+            $item[$key] = $this->nativeToValue($element);
         }
 
         // Map to an array or a struct, depending on whether a numeric
@@ -349,5 +359,40 @@ class OdooClient
         } else {
             return $this->structValue($item);
         }
+    }
+
+    /**
+     * Convert a Value object into native PHP types.
+     * Basically the reverse of nativeToValue().
+     *
+     * @param Value the object to convert, which may contain nested objects
+     * @returns mixed a null, an array, a scalar, and may be nested
+     */
+    public function valueToNative(Value $value)
+    {
+        switch ($value->kindOf()) {
+            case 'array':
+                $result = [];
+                foreach ($value->getIterator() as $element) {
+                    $result[] = $this->valueToNative($element);
+                }
+                break;
+            case 'struct':
+                $result = [];
+                foreach ($value->getIterator() as $key => $element) {
+                    $result[$key] = $this->valueToNative($element);
+                }
+                break;
+            case 'scalar':
+                return $value->scalarval();
+                break;
+            default:
+                throw new Exception(sprintf(
+                    'Unexpected data type %s',
+                    $value->kindOf()
+                ));
+        }
+
+        return $result;
     }
 }

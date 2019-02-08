@@ -10,7 +10,7 @@
     "license": "MIT",
     "require": {
         "php": ">= 7.0.0",
-        "phpxmlrpc/phpxmlrpc": "~4.0"
+        "phpxmlrpc/phpxmlrpc": "~4.3"
     },
     "autoload": {
         "psr-4": {
