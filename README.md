@@ -1,6 +1,6 @@
 # Consilience Laravel Odoo XML RPC Client
 
-Tested against Laravel 5.7 and Odoo 7 (OpenERP 7).
+Tested against Laravel 5.7 and Odoo 7 _(OpenERP 7)_.
 
 More docs to do, examples to write, and the write interfaces to produce.
 
