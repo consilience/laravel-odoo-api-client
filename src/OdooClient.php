@@ -26,6 +26,8 @@ class OdooClient
     const TYPE_DOUBLE   = 'double';
     const TYPE_NULL     = 'null';
 
+    const DEFAULT_LIMIT = 100;
+
     /**
      *
      */
@@ -40,6 +42,11 @@ class OdooClient
      * int the user ID used to access the endpoints.
      */
     protected $userId;
+
+    /**
+     * The version of the server, fetched when logging in.
+     */
+    protected $serverVersion;
 
     /**
      * Config data.
@@ -131,10 +138,16 @@ class OdooClient
 
         // Grab the User ID.
 
-        $userId = $response->value()->me['int'];
+        $this->userId = $this->valueToNative($response->value());
 
-        if ($userId > 0) {
-            return $userId;
+        // Get the server version for capabilities.
+
+        $version = $this->version();
+
+        $this->serverVersion = $version['server_version'] ?? '';
+
+        if ($this->userId > 0) {
+            return $this->userId;
         }
 
         throw new Exception(sprintf(
@@ -201,7 +214,7 @@ class OdooClient
         string $modelName,
         array $criteria = [],
         $offset = 0,
-        $limit = 100,
+        $limit = self::DEFAULT_LIMIT,
         $order = ''
     ) {
         $msg = $this->getBaseObjectRequest($modelName, 'search');
@@ -218,8 +231,41 @@ class OdooClient
     }
 
     /**
+     * Same as search() but returns a native array.
+     *
+     * @return array
+     */
+    public function searchArray(
+        string $modelName,
+        array $criteria = [],
+        $offset = 0,
+        $limit = self::DEFAULT_LIMIT,
+        $order = ''
+    ) {
+        $response = $this->search(
+            $modelName,
+            $criteria,
+            $offset,
+            $limit,
+            $order
+        );
+
+        if ($response->value() instanceof Value) {
+            return $this->valueToNative($response->value());
+        }
+
+        // An error in the criteria or model provided.
+
+        throw new Exception(sprintf(
+            'Failed to search model %s; response was "%s"',
+            $modelName,
+            $response->value()
+        ));
+    }
+
+    /**
      * Example:
-     * OdooApi::getClient()->search_count('res.partner', $criteria)
+     * OdooApi::getClient()->searchCount('res.partner', $criteria)
      *
      * @return integer
      */
@@ -233,7 +279,7 @@ class OdooClient
 
         $response = $this->getXmlRpcClient('object')->send($msg);
 
-        return $response->value()->me['int'];
+        return $this->valueToNative($response->value());
     }
 
     /**
@@ -244,21 +290,69 @@ class OdooClient
         string $modelName,
         array $criteria = [],
         $offset = 0,
-        $limit = 100,
+        $limit = self::DEFAULT_LIMIT,
         $order = ''
     ) {
-        $msg = $this->getBaseObjectRequest($modelName, 'search_read');
+        if (version_compare('8.0', $this->serverVersion) === 1) {
+            // Less than Odoo 8.0, so search_read is not supported.
+            // However, we will emulate it.
 
-        $msg->addParam($this->nativeToValue($criteria));
+            $ids = $this->searchArray(
+                $modelName,
+                $criteria,
+                $offset,
+                $limit,
+                $order
+            );
 
-        // To be fixed when we have Odoo 8 available to develop against.
+            return $this->read($modelName, $ids);
+        } else {
+            $msg = $this->getBaseObjectRequest($modelName, 'search_read');
 
-        //$msg->addParam($this->stringValue('id'));
+            $msg->addParam($this->nativeToValue($criteria));
 
-        //$msg->addParam($this->stringValue($offset)); // offset
-        //$msg->addParam($this->intValue($limit));  // limit
-        //$msg->addParam($this->stringValue($order)); // order, CSV list
-        //$msg->addParam($this->structValue(['fields' => $this->arrayValue(['id', 'name'])]));
+            $msg->addParam($this->intValue($offset));
+            $msg->addParam($this->intValue($limit));
+            $msg->addParam($this->stringValue($order));
+
+            $response = $this->getXmlRpcClient('object')->send($msg);
+        }
+
+        return $response;
+    }
+
+    /**
+     * Same as searchRead but returning a native PHP array.
+     */
+    public function searchReadArray(
+        string $modelName,
+        array $criteria = [],
+        $offset = 0,
+        $limit = self::DEFAULT_LIMIT,
+        $order = ''
+    ) {
+        $response = $this->searchRead(
+            $modelName,
+            $criteria,
+            $offset,
+            $limit,
+            $order
+        );
+
+        return $this->valueToNative($response->value());
+    }
+
+    /**
+     * @param array $instanceIds list of model instance IDs to read and return
+     * @return Response
+     */
+    public function read(
+        string $modelName,
+        array $instanceIds = []
+    ) {
+        $msg = $this->getBaseObjectRequest($modelName, 'read');
+
+        $msg->addParam($this->nativeToValue($instanceIds));
 
         $response = $this->getXmlRpcClient('object')->send($msg);
 
@@ -266,23 +360,47 @@ class OdooClient
     }
 
     /**
-     * $criteria is an array of IDs.
+     * Same as read() but returns a native array.
      */
-    public function read(
+    public function readArray(
         string $modelName,
-        array $criteria = []
+        array $instanceIds = []
     ) {
-        $msg = $this->getBaseObjectRequest($modelName, 'read');
+        $response = $this->read(
+            $modelName,
+            $instanceIds
+        );
 
-        $msg->addParam($this->nativeToValue($criteria));
+        if ($response->value() instanceof Value) {
+            return $this->valueToNative($response->value());
+        }
 
-        $response = $this->getXmlRpcClient('object')->send($msg);
+        // An error in the instanceIds or model provided.
 
-        return $response;
+        throw new Exception(sprintf(
+            'Failed to read model %s; response was "%s"',
+            $modelName,
+            $response->value()
+        ));
+    }
+
+    /**
+     * Get the server version information.
+     *
+     * @return array
+     */
+    public function version()
+    {
+        $msg = new Request('version');
+
+        $response = $this->getXmlRpcClient('common')->send($msg);
+
+        return $this->valueToNative($response->value());
     }
 
     //
     // TODO: actions to implement = create write unlink
+    // Also: fields_get, version
     //
 
     /**
@@ -310,8 +428,7 @@ class OdooClient
 
         $criteria[] = ['name', '=', $name];
 
-        $result = $this->search('ir.model.data', $criteria);
-        $irModelDataIds = $this->valueToNative($result->value());
+        $irModelDataIds = $this->searchArray('ir.model.data', $criteria);
         $irModelDataId = collect($irModelDataIds)->first();
 
         if ($irModelDataId === null) {
@@ -321,8 +438,9 @@ class OdooClient
 
         // Now read the full record to get the resource ID.
 
-        $irModelDataArray = $this->valueToNative(
-            $this->read('ir.model.data', [$irModelDataId])->value()
+        $irModelDataArray = $this->readArray(
+            'ir.model.data',
+            [$irModelDataId]
         );
         $irModelData = collect($irModelDataArray)->first();
 

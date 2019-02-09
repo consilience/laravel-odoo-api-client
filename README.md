@@ -71,6 +71,26 @@ $client->searchCount('res.partner', $criteria);
 $client->read('res.partner', [17858, 17852])->value()->me['array']
 ```
 
+# Query methods
+
+The following methods are supported and will return an XML-RPC response:
+
+* search()
+* searchRead()
+* read()
+
+The following helper functions return a native PHp type insead:
+
+* searchArray - array
+* searchReadArray - array
+* readArray - array
+* searchCount - integer
+* getResourceId - integer
+
+Note that `searchRead` will emulate the server's `search_read` for
+Odoo versions less than 8.0 (OpenERP) but use the native `search_read`
+for Odoo 8.0 upwards.
+
 # TODO
 
 * An elegant way to parse the results, as the `Value` objects can be
