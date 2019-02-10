@@ -29,7 +29,7 @@ class OdooClient
     const DEFAULT_LIMIT = 100;
 
     /**
-     *
+     * Later versions of the API include a version number e.g. /xmlrpc/2/
      */
     protected $endpointTemplate = '{uri}/xmlrpc/{type}';
 
@@ -75,15 +75,18 @@ class OdooClient
     }
 
     /**
-     * Get an XML ROC client singleton of a particular type.
+     * Get an XML RRC client singleton of a particular type.
+     *
+     * @param string $type One of: 'common', 'object', 'db'
+     * @return Client 
      */
     public function getXmlRpcClient(string $type)
     {
+        $type = strtolower($type);
+
         if (array_key_exists($type, $this->xmlRpcClients)) {
             return $this->xmlRpcClients[$type];
         }
-
-        $type = strtolower($type);
 
         $endpoint = str_replace(
             ['{uri}', '{type}'],
@@ -343,16 +346,23 @@ class OdooClient
     }
 
     /**
+     * @param string $modelName example res.partner
      * @param array $instanceIds list of model instance IDs to read and return
+     * @param array $options varies with API versions see documentation
      * @return Response
      */
     public function read(
         string $modelName,
-        array $instanceIds = []
+        array $instanceIds = [],
+        array $options = []
     ) {
         $msg = $this->getBaseObjectRequest($modelName, 'read');
 
         $msg->addParam($this->nativeToValue($instanceIds));
+
+        if (! empty($options)) {
+            $msg->addParam($this->nativeToValue($options));
+        }
 
         $response = $this->getXmlRpcClient('object')->send($msg);
 
@@ -364,11 +374,13 @@ class OdooClient
      */
     public function readArray(
         string $modelName,
-        array $instanceIds = []
+        array $instanceIds = [],
+        array $options = []
     ) {
         $response = $this->read(
             $modelName,
-            $instanceIds
+            $instanceIds,
+            $options
         );
 
         if ($response->value() instanceof Value) {
@@ -405,6 +417,9 @@ class OdooClient
 
     /**
      * Get the ERP internal resource ID for a given external ID.
+     * This in thoery kind of belongs in a wrapper to the client,
+     * but is used so often in data syncs that it makes sense having
+     * it here.
      *
      * @param string $externalId either "name" or "module.name"
      * @param string $module optional, but recommended

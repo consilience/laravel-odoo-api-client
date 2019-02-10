@@ -30,6 +30,10 @@ Publish `config\odoo-api.php` using the Laravel artisan command:
 
 A sample set of entries for `.env` can be found in `.env.example`.
 
+You can add multiple sets of configuration to `config\odoo-api.php` and
+use them all at once in your application.
+The configuration set name is passed in to `OdooApi::getClient('config-name')`.
+
 # Example
 
 A very simple example:
@@ -71,6 +75,13 @@ $client->searchCount('res.partner', $criteria);
 $client->read('res.partner', [17858, 17852])->value()->me['array']
 ```
 
+If you have specific requirements for the XML-RPC client, such as an SSL
+certificate to add, then yiu can get the client instance using:
+
+    $xmlRpcClient = $client->getXmlRpcClient($type);
+
+where `$type` will typically be 'db', 'common' or 'object'.
+
 # Query methods
 
 The following methods are supported and will return an XML-RPC response:
@@ -87,17 +98,31 @@ The following helper functions return a native PHp type insead:
 * searchCount - integer
 * getResourceId - integer
 
+(I'm torn between this approach and a more fluent approach such as
+`$client->firstOnly()->asArray()->read(...)`)
+
 Note that `searchRead` will emulate the server's `search_read` for
 Odoo versions less than 8.0 (OpenERP) but use the native `search_read`
 for Odoo 8.0 upwards.
 
+# Read Options
+
+The `read()` method takes an options array that varies significantly
+between OpenERP/Odoo versions.
+This package does not attempt to deal with that at this time.
+
+Fpor example, to restrict the read to named attributes, the following
+formats are used:
+
+* OpenERP 7: $client->read('account.invoice', [123], ['type', 'partner_id']);
+* OpenERP 8: $client->read('account.invoice', [123], ['fields' => ['type', 'partner_id']]);
+* OpenERP 10: $client->read('account.invoice', [123], ['attributes' => ['type', 'partner_id']]);
+
+This makes finding help on the API difficult, since many articles
+fail to make the OpenERP/Odoo version number clear.
+
 # TODO
 
-* An elegant way to parse the results, as the `Value` objects can be
-  a little cumbersome.
-  For example, we know the `search()` result will be an array of
-  integer model instance IDs, so a simple array or collection of IDs can
-  be returned, rather than a Value array containing Value integer objects.
 * Docs on config (this package supports multiple clients, so can connect
   to multiple Odoo instances or as multiple users at the same time).
 * Docs on installation (has a auto discovered provider and facade).
