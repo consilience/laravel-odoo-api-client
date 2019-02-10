@@ -29,6 +29,53 @@ class OdooClient
     const DEFAULT_LIMIT = 100;
 
     /**
+     * The action to perform when updating a one-to-many relation.
+     * Note: a many-to-many relation is treated like a one-to-many
+     * relation from each side.
+     * - Actions 0 to 2 manage CRUD operations on the models being
+     *   linked to.
+     * - Actions 3 to 6 manage just the relationship between existing
+     *   models.
+     */
+    // Adds a new record created from the provided value dict.
+    // (0, _, values)
+    const RELATION_CREATE = 0;
+    //
+    // Updates an existing record of id `id` with the values in values.
+    // Can not be used in create().
+    // (1, id, values)
+    const RELATION_UPDATE = 1;
+    //
+    // Removes the record of id `id` from the set, then deletes it
+    // (from the database).
+    // Can not be used in create().
+    // (2, id, _)
+    const RELATION_DELETE = 2;
+    //
+    // Removes the record of id `id` from the set, but does not delete it.
+    // Can not be used on One2many. Can not be used in create().
+    // (3, id, _)
+    const RELATION_REMOVE_LINK = 3;
+    //
+    // Adds an existing record of id `id` to the set. Can not be used on One2many.
+    // (4, id, _)
+    const RELATION_ADD_LINK = 4;
+    //
+    // Removes all records from the set, equivalent to using the
+    // command 3 on every record explicitly.
+    // Can not be used on One2many.
+    // Can not be used in create().
+    // (5, _, _)
+    const RELATION_REMOVE_ALL_LINKs = 5;
+    //
+    // Replaces all existing records in the set by the ids list,
+    // equivalent to using the command 5 followed by a command 4
+    // for each id in ids.
+    // Can not be used on One2many.
+    // (6, _, ids)
+    const RELATION_REPLACE_ALL_LINKS = 6;
+
+    /**
      * Later versions of the API include a version number e.g. /xmlrpc/2/
      */
     protected $endpointTemplate = '{uri}/xmlrpc/{type}';

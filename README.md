@@ -123,11 +123,6 @@ fail to make the OpenERP/Odoo version number clear.
 
 # TODO
 
-* Docs on config (this package supports multiple clients, so can connect
-  to multiple Odoo instances or as multiple users at the same time).
-* Docs on installation (has a auto discovered provider and facade).
-  Includes details on how to publish the config file.
 * The write functions are not written yet (create, write and unlink).
-* The search_read method is not supported yet.
-* The setting of the configuration could be done in a more fluent
-  way, as tends to be the Laravel way. But it's no biggie.
+* Examples on how relationships are managed are needed, since they are
+  one of the areas that cause the most confusion.
