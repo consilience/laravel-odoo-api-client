@@ -66,7 +66,7 @@ class OdooClient
     // Can not be used on One2many.
     // Can not be used in create().
     // (5, _, _)
-    const RELATION_REMOVE_ALL_LINKs = 5;
+    const RELATION_REMOVE_ALL_LINKS = 5;
     //
     // Replaces all existing records in the set by the ids list,
     // equivalent to using the command 5 followed by a command 4
@@ -107,6 +107,11 @@ class OdooClient
     protected $database;
     protected $username;
     protected $password;
+
+    /**
+     * The last response.
+     */
+    protected $response;
 
     /**
      * @param array $config the connection configuration details
@@ -176,7 +181,7 @@ class OdooClient
         // Send the request.
 
         try {
-            $response = $xmlRpcClient->send($msg);
+            $this->response = $xmlRpcClient->send($msg);
         } catch (Exception $e) {
             // Some connection problem.
 
@@ -188,7 +193,7 @@ class OdooClient
 
         // Grab the User ID.
 
-        $this->userId = $this->valueToNative($response->value());
+        $this->userId = $this->valueToNative($this->response->value());
 
         // Get the server version for capabilities.
 
@@ -275,9 +280,9 @@ class OdooClient
         $msg->addParam($this->intValue($limit));
         $msg->addParam($this->stringValue($order));
 
-        $response = $this->getXmlRpcClient('object')->send($msg);
+        $this->response = $this->getXmlRpcClient('object')->send($msg);
 
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -292,7 +297,7 @@ class OdooClient
         $limit = self::DEFAULT_LIMIT,
         $order = ''
     ) {
-        $response = $this->search(
+        $this->response = $this->search(
             $modelName,
             $criteria,
             $offset,
@@ -300,8 +305,8 @@ class OdooClient
             $order
         );
 
-        if ($response->value() instanceof Value) {
-            return $this->valueToNative($response->value());
+        if ($this->response->value() instanceof Value) {
+            return $this->valueToNative($this->response->value());
         }
 
         // An error in the criteria or model provided.
@@ -309,7 +314,7 @@ class OdooClient
         throw new Exception(sprintf(
             'Failed to search model %s; response was "%s"',
             $modelName,
-            $response->value()
+            $this->response->value()
         ));
     }
 
@@ -327,9 +332,9 @@ class OdooClient
 
         $msg->addParam($this->nativeToValue($criteria));
 
-        $response = $this->getXmlRpcClient('object')->send($msg);
+        $this->response = $this->getXmlRpcClient('object')->send($msg);
 
-        return $this->valueToNative($response->value());
+        return $this->valueToNative($this->response->value());
     }
 
     /**
@@ -365,10 +370,10 @@ class OdooClient
             $msg->addParam($this->intValue($limit));
             $msg->addParam($this->stringValue($order));
 
-            $response = $this->getXmlRpcClient('object')->send($msg);
+            $this->response = $this->getXmlRpcClient('object')->send($msg);
         }
 
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -381,7 +386,7 @@ class OdooClient
         $limit = self::DEFAULT_LIMIT,
         $order = ''
     ) {
-        $response = $this->searchRead(
+        $this->response = $this->searchRead(
             $modelName,
             $criteria,
             $offset,
@@ -389,7 +394,7 @@ class OdooClient
             $order
         );
 
-        return $this->valueToNative($response->value());
+        return $this->valueToNative($this->response->value());
     }
 
     /**
@@ -411,9 +416,9 @@ class OdooClient
             $msg->addParam($this->nativeToValue($options));
         }
 
-        $response = $this->getXmlRpcClient('object')->send($msg);
+        $this->response = $this->getXmlRpcClient('object')->send($msg);
 
-        return $response;
+        return $this->response;
     }
 
     /**
@@ -424,14 +429,14 @@ class OdooClient
         array $instanceIds = [],
         array $options = []
     ) {
-        $response = $this->read(
+        $this->response = $this->read(
             $modelName,
             $instanceIds,
             $options
         );
 
-        if ($response->value() instanceof Value) {
-            return $this->valueToNative($response->value());
+        if ($this->response->value() instanceof Value) {
+            return $this->valueToNative($this->response->value());
         }
 
         // An error in the instanceIds or model provided.
@@ -439,7 +444,7 @@ class OdooClient
         throw new Exception(sprintf(
             'Failed to read model %s; response was "%s"',
             $modelName,
-            $response->value()
+            $this->response->value()
         ));
     }
 
@@ -452,13 +457,58 @@ class OdooClient
     {
         $msg = new Request('version');
 
-        $response = $this->getXmlRpcClient('common')->send($msg);
+        $this->response = $this->getXmlRpcClient('common')->send($msg);
 
-        return $this->valueToNative($response->value());
+        return $this->valueToNative($this->response->value());
+    }
+
+    /**
+     * Create a new resource.
+     *
+     * @param array $fields 
+     */
+    public function create(string $modelName, array $fields)
+    {
+        $msg = $this->getBaseObjectRequest($modelName, 'create');
+
+        $msg->addParam($this->nativeToValue($fields));
+
+        $this->response = $this->getXmlRpcClient('object')->send($msg);
+
+        // If there was an error, then an integer will be returned.
+
+        if (! $this->response->value() instanceof Value) {
+            return $this->response->value();
+        }
+
+        return $this->valueToNative($this->response->value());
+    }
+
+    /**
+     * Update a resource.
+     *
+     * @return bool true if the update was successful.
+     */
+    public function write(string $modelName, int $resourceId, array $fields)
+    {
+        $msg = $this->getBaseObjectRequest($modelName, 'write');
+
+        $msg->addParam($this->nativeToValue([$resourceId]));
+        $msg->addParam($this->nativeToValue($fields));
+
+        $this->response = $this->getXmlRpcClient('object')->send($msg);
+
+        // If there was an error, then an integer will be returned.
+
+        if (! $this->response->value() instanceof Value) {
+            return $this->response->value();
+        }
+
+        return $this->valueToNative($this->response->value());
     }
 
     //
-    // TODO: actions to implement = create write unlink
+    // TODO: actions to implement = unlink
     // Also: fields_get, version
     //
 
@@ -675,5 +725,16 @@ class OdooClient
         }
 
         return $result;
+    }
+
+    /**
+     * The last response, in case it needs to be inspected for
+     * error reasons.
+     *
+     * @return Response|null
+     */
+    public function getLastResponse()
+    {
+        return $this->response;
     }
 }

@@ -97,10 +97,11 @@ The following helper functions return a native PHP type insead:
 * readArray - array
 * searchCount - integer
 * getResourceId - integer
-* getResourceId2 - array
+* getResourceIds - array
 
 (I'm torn between this approach and a more fluent approach such as
-`$client->firstOnly()->asArray()->read(...)`)
+`$client->firstOnly()->asArray()->read(...)` to set the context that
+will apply to the next command.)
 
 Note that `searchRead` will emulate the server's `search_read` for
 Odoo versions less than 8.0 (OpenERP) but use the native `search_read`
@@ -124,6 +125,8 @@ fail to make the OpenERP/Odoo version number clear.
 
 # TODO
 
-* The write functions are not written yet (create, write and unlink).
+* The write functions are not written yet (~~create~~, ~~write~~ and unlink).
 * Examples on how relationships are managed are needed, since they are
-  one of the areas that cause the most confusion.
+  one of the areas that cause the most confusion. It's actuall pretty
+  easy once you see the technique, though a helper may be useful to
+  put together the data structure needed.
