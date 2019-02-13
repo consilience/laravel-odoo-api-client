@@ -474,37 +474,86 @@ class OdooClient
      */
     public function getResourceId(string $externalId, string $model = null)
     {
+        $resourceIds = $this->getResourceIds([$externalId], $model);
+
+        return collect($resourceIds)->first();
+    }
+
+    /**
+     * Get multiple resource IDs at once.
+     *
+     * @param array $externalIds each either "name" or "module.name"
+     * @param string $module optional, but recommended
+     * @return int|null
+     *
+     * FIXME: all external IDs must have the same "module" at the moment.
+     */
+    public function getResourceIds(
+        array $externalIds,
+        string $model = null,
+        $offset = 0,
+        $limit = self::DEFAULT_LIMIT,
+        $order = ''
+    ) {
         $criteria = [];
 
         if ($model !== null) {
             $criteria[] = ['model', '=', 'res.partner'];
         }
 
-        if (strpos($externalId, '.') !== false) {
-            list ($module, $name) = explode('.', $externalId, 2);
+        $moduleList = [];
 
-            $criteria[] = ['module', '=', $module];
-        } else {
-            $name = $externalId;
+        foreach($externalIds as $externalId) {
+            if (strpos($externalId, '.') !== false) {
+                list ($module, $name) = explode('.', $externalId, 2);
+            } else {
+                $name = $externalId;
+                $module = '{none}';
+            }
+
+            if (! array_key_exists($module, $moduleList)) {
+                $moduleList[$module] = [];
+            }
+
+            $moduleList[$module][] = $name;
         }
 
-        $criteria[] = ['name', '=', $name];
+        // TODO: work out how to represent the boolean OR operator
+        // for multiple modules fetched at once.
+        // Each set of conditions in this loop should be ORed with
+        // every other set of conditions in this loop.
+        // So we should be able to search for "foo.bar_123" and "fing.bing_456"
+        // in one query, giving us conceptually:
+        // ((module = foo and name = bar_123) or (module = fing and name = bing_456))
 
-        $irModelDataIds = $this->searchArray('ir.model.data', $criteria);
-        $irModelDataId = collect($irModelDataIds)->first();
+        foreach($moduleList as $module => $externalIds) {
+            if ($module !== '{none}') {
+                $criteria[] = ['module', '=', $module];
+            }
 
-        if ($irModelDataId === null) {
+            $criteria[] = ['name', 'in', $externalIds];
+        }
+
+        $irModelDataIds = $this->searchArray(
+            'ir.model.data',
+            $criteria,
+            $offset,
+            $limit,
+            $order
+        );
+
+        if (empty($irModelDataIds)) {
             // No matches found, so give up now.
             return;
         }
 
-        // Now read the full record to get the resource ID.
+        // Now read the full records to get the resource IDs.
 
         $irModelDataArray = $this->readArray(
             'ir.model.data',
-            [$irModelDataId]
+            $irModelDataIds
         );
-        $irModelData = collect($irModelDataArray)->first();
+        $irModelData = collect($irModelDataArray);
 
         if ($irModelData === null) {
             // We could not find the record.
@@ -512,9 +561,9 @@ class OdooClient
             return;
         }
 
-        // Return the resource ID.
+        // Return the resource IDs.
 
-        return $irModelData['res_id'];
+        return $irModelData->pluck('res_id')->toArray();
     }
 
     /**

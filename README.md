@@ -90,13 +90,14 @@ The following methods are supported and will return an XML-RPC response:
 * searchRead()
 * read()
 
-The following helper functions return a native PHp type insead:
+The following helper functions return a native PHP type insead:
 
 * searchArray - array
 * searchReadArray - array
 * readArray - array
 * searchCount - integer
 * getResourceId - integer
+* getResourceId2 - array
 
 (I'm torn between this approach and a more fluent approach such as
 `$client->firstOnly()->asArray()->read(...)`)
