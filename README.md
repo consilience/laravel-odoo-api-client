@@ -40,7 +40,7 @@ A very simple example:
 
 ```php
 
-// This facade is auto-discoverec for Laravel 5.6+
+// This facade is auto-discovered for Laravel 5.6+
 
 use OdooApi;
 
@@ -81,6 +81,13 @@ certificate to add, then yiu can get the client instance using:
     $xmlRpcClient = $client->getXmlRpcClient($type);
 
 where `$type` will typically be 'db', 'common' or 'object'.
+
+You have the ability to construct your own messages from scratch like this,
+and there are helper methods in the `$client` to convert native PHP data types
+to and from XML RPC value objects.
+However, you should be able to leave all that conversion to be handled in the
+background by the client - just give it array/string/in/etc. data and get
+models and arrays back.
 
 # Query methods
 
@@ -143,3 +150,9 @@ $response = $client->write(
     ]
 );
 ```
+
+# TODO
+
+* Conversion of date types has not been tested.
+  Ideally we would support Carbon 2 for sending dates in and getting
+  dates back out again.
