@@ -35,8 +35,10 @@ trait HasModelDataTrait
 
     /**
      * Get a data field using a "dot notation" path.
+     *
+     * @inherit
      */
-    public function get($key, $default = null)
+    public function get(string $key, $default = null)
     {
         // Since we are running under laravel, use laravel's helper.
 

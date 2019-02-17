@@ -46,32 +46,23 @@ class OdooClient
     // (1, id, values)
     const RELATION_UPDATE = 1;
     //
-    // Removes the record of id `id` from the set, then deletes it
-    // (from the database).
-    // Can not be used in create().
+    // Removes the record of id `id` from the set, then deletes it.
     // (2, id, _)
     const RELATION_DELETE = 2;
     //
     // Removes the record of id `id` from the set, but does not delete it.
-    // Can not be used on One2many. Can not be used in create().
     // (3, id, _)
     const RELATION_REMOVE_LINK = 3;
     //
-    // Adds an existing record of id `id` to the set. Can not be used on One2many.
+    // Adds an existing record of id `id` to the set.
     // (4, id, _)
     const RELATION_ADD_LINK = 4;
     //
-    // Removes all records from the set, equivalent to using the
-    // command 3 on every record explicitly.
-    // Can not be used on One2many.
-    // Can not be used in create().
+    // Removes all records from the set.
     // (5, _, _)
     const RELATION_REMOVE_ALL_LINKS = 5;
     //
-    // Replaces all existing records in the set by the ids list,
-    // equivalent to using the command 5 followed by a command 4
-    // for each id in ids.
-    // Can not be used on One2many.
+    // Replaces all existing links with a new set.
     // (6, _, ids)
     const RELATION_REPLACE_ALL_LINKS = 6;
 
@@ -685,6 +676,7 @@ class OdooClient
     /**
      * Return a message with the base parameters for any object call.
      * Identified the login credentials, model and action.
+     * TODO: this should go in the connector factory.
      *
      * @param string|null $modelName
      * @param string|null $action will be used only the $modelName is provided
@@ -710,6 +702,116 @@ class OdooClient
 
         return $msg;
     }
+
+    /**
+     * Adds a new record created from the provided value dict.
+     *
+     * @param array $values
+     * @return array
+     */
+    public function relationCreate(array $values)
+    {
+        return [[
+            static::RELATION_CREATE, 0, $values
+        ]];
+    }
+
+    /**
+     * Updates an existing record of id `id` with the values in values.
+     * Can not be used in create().
+     *
+     * @param int $resourceId the resource to update
+     * @param array $values
+     * @return array
+     *
+     * TODO: as well as an array of values, accept a model.
+     * The model, ideally, would be able to provide a list of all the
+     * fields that have changed so that only those are updated.
+     * Extending that into relations within the field list would be
+     * a bit more involved though.
+     */
+    public function relationUpdate(int $resourceId, array $values)
+    {
+        return [[
+            static::RELATION_UPDATE, $resourceId, $values
+        ]];
+    }
+
+    /**
+     * Removes the record of id `id` from the set, then deletes it
+     * (from the database).
+     * Can not be used in create().
+     *
+     * @param int $resourceId the resource to be removed from the database
+     * @return array
+     */
+    public function relationDelete(int $resourceId)
+    {
+        return [[
+            static::RELATION_DELETE, $resourceId, 0
+        ]];
+    }
+
+    /**
+     * Removes the record of id `id` from the set, but does not delete it.
+     * Can not be used on one2many.
+     * Can not be used in create().
+     *
+     * @param int $resourceId the resource to be removed from the link
+     * @return array
+     */
+    public function relationRemoveLink(int $resourceId)
+    {
+        return [[
+            static::RELATION_REMOVE_LINK, $resourceId, 0
+        ]];
+    }
+
+    /**
+     * Creates data structure for setting relationship details.
+     * Adds an existing record of id `id` to the set.
+     * Can not be used on one2many.
+     *
+     * @param int $resourceId the resource to be added to the link
+     * @return array
+     */
+    public function relationAddLink(int $resourceId)
+    {
+        return [[
+            static::RELATION_ADD_LINK, $resourceId, 0
+        ]];
+    }
+
+    /**
+     * Removes all records from the set, equivalent to using the
+     * command 3 on every record explicitly.
+     * Can not be used on one2many.
+     * Can not be used in create().
+     *
+     * @return array
+     */
+    public function relationRemoveAllLinks()
+    {
+        return [[
+            static::RELATION_REMOVE_ALL_LINKS, 0, 0
+        ]];
+    }
+
+    /**
+     * Replaces all existing records in the set by the ids list,
+     * equivalent to using the command 5 followed by a command 4
+     * for each id in ids.
+     * Can not be used on one2many.
+     *
+     * @return array
+     */
+    public function relationReplaceAllLinks(iterator $resourceIds)
+    {
+        return [[
+            static::RELATION_REPLACE_ALL_LINKS, 0, $resourceIds
+        ]];
+    }
+
 
     /**
      * Walk through the criteria array and convert scalar values to
