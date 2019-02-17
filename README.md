@@ -2,6 +2,13 @@
 
 Tested against Laravel 5.7 and Odoo 7 _(OpenERP 7)_.
 
+# Introduction
+
+The aim of this package is to provide easy access to the
+OpenERP/Odoo XML-RPC API from within Laravel.
+Just set up some config, get a client from the `OdooApi`
+facade, and throw it some data.
+
 # Installation
 
 Through composer:
@@ -156,3 +163,10 @@ $response = $client->write(
 * Conversion of date types has not been tested.
   Ideally we would support Carbon 2 for sending dates in and getting
   dates back out again.
+* Tests. It's always the tests that get left behind when time gets in
+  the way. They need to run on a Laravel context, so helpers needed for
+  that.
+* Would be nice to split this up into a non-laravel package and then
+  add a separate laravel wrapper for it. But collections are just too
+  nice, so this may not happen.
+
