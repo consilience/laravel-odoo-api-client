@@ -97,7 +97,7 @@ The following helper functions return a native PHP type insead:
 * searchCount - integer
 * getResourceId - integer
 * unlink - boolean
-* create - boolean
+* create - integer
 
 All `read()` and `searchRead()` methods will return a collection of models.
 The default model will be `Consilience\OdooApi\Model`, but other models can be specified.
@@ -131,7 +131,6 @@ TODO (it's fairly simple once explained)
 
 # TODO
 
-* The write functions are not written yet (~~create~~, ~~write~~ and unlink).
 * Examples on how relationships are managed are needed, since they are
   one of the areas that cause the most confusion. It's actuall pretty
   easy once you see the technique, though a helper may be useful to
