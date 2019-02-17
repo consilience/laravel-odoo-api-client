@@ -114,6 +114,11 @@ class OdooClient
     protected $response;
 
     /**
+     * List of model name mappings to model classes.
+     */
+    protected $modelMapping = [];
+
+    /**
      * @param array $config the connection configuration details
      */
     public function __construct(array $config)
@@ -128,6 +133,8 @@ class OdooClient
 
     /**
      * Get an XML RRC client singleton of a particular type.
+     * TODO: turn this into a factory for a connector that wraps
+     * the XML RPC client, injected into OdooClient.
      *
      * @param string $type One of: 'common', 'object', 'db'
      * @return Client 
@@ -224,7 +231,7 @@ class OdooClient
         return $this->value($data, static::TYPE_STRING);
     }
 
-    public function arrayValue(array $data)
+    public function arrayValue(iterable $data)
     {
         return $this->value($data, static::TYPE_ARRAY);
     }
@@ -282,31 +289,8 @@ class OdooClient
 
         $this->response = $this->getXmlRpcClient('object')->send($msg);
 
-        return $this->response;
-    }
-
-    /**
-     * Same as search() but returns a native array.
-     *
-     * @return array
-     */
-    public function searchArray(
-        string $modelName,
-        array $criteria = [],
-        $offset = 0,
-        $limit = self::DEFAULT_LIMIT,
-        $order = ''
-    ) {
-        $this->response = $this->search(
-            $modelName,
-            $criteria,
-            $offset,
-            $limit,
-            $order
-        );
-
         if ($this->response->value() instanceof Value) {
-            return $this->valueToNative($this->response->value());
+            return collect($this->valueToNative($this->response->value()));
         }
 
         // An error in the criteria or model provided.
@@ -352,7 +336,7 @@ class OdooClient
             // Less than Odoo 8.0, so search_read is not supported.
             // However, we will emulate it.
 
-            $ids = $this->searchArray(
+            $ids = $this->search(
                 $modelName,
                 $criteria,
                 $offset,
@@ -405,7 +389,7 @@ class OdooClient
      */
     public function read(
         string $modelName,
-        array $instanceIds = [],
+        iterable $instanceIds = [],
         array $options = []
     ) {
         $msg = $this->getBaseObjectRequest($modelName, 'read');
@@ -418,25 +402,14 @@ class OdooClient
 
         $this->response = $this->getXmlRpcClient('object')->send($msg);
 
-        return $this->response;
-    }
-
-    /**
-     * Same as read() but returns a native array.
-     */
-    public function readArray(
-        string $modelName,
-        array $instanceIds = [],
-        array $options = []
-    ) {
-        $this->response = $this->read(
-            $modelName,
-            $instanceIds,
-            $options
-        );
-
         if ($this->response->value() instanceof Value) {
-            return $this->valueToNative($this->response->value());
+            $data = $this->valueToNative($this->response->value());
+
+            $modelName = $this->mapModelName($modelName);
+
+            return collect($data)->map(function ($item) use ($modelName) {
+                return new $modelName($item);
+            });
         }
 
         // An error in the instanceIds or model provided.
@@ -507,10 +480,48 @@ class OdooClient
         return $this->valueToNative($this->response->value());
     }
 
-    //
-    // TODO: actions to implement = unlink
-    // Also: fields_get, version
-    //
+    /**
+     * Remove a resource.
+     *
+     * @return bool true if the removal was successful.
+     */
+    public function unlink(string $modelName, int $resourceId)
+    {
+        $msg = $this->getBaseObjectRequest($modelName, 'unlink');
+
+        $msg->addParam($this->nativeToValue([$resourceId]));
+
+        $this->response = $this->getXmlRpcClient('object')->send($msg);
+
+        // If there was an error, then an integer will be returned.
+
+        if (! $this->response->value() instanceof Value) {
+            return $this->response->value();
+        }
+
+        return $this->valueToNative($this->response->value());
+    }
+
+    /**
+     * Get a list of fields for a resource.
+     * TODO: there are some more parameters to define the context more.
+     *
+     * @return Collection of arrays (may be collection of models later)
+     */
+    public function fieldsGet(string $modelName)
+    {
+        $msg = $this->getBaseObjectRequest($modelName, 'fields_get');
+
+        $this->response = $this->getXmlRpcClient('object')->send($msg);
+
+        // If there was an error, then an integer will be returned.
+
+        if (! $this->response->value() instanceof Value) {
+            return $this->response->value();
+        }
+
+        return $this->valueToNative($this->response->value());
+    }
 
     /**
      * Get the ERP internal resource ID for a given external ID.
@@ -526,7 +537,7 @@ class OdooClient
     {
         $resourceIds = $this->getResourceIds([$externalId], $model);
 
-        return collect($resourceIds)->first();
+        return $resourceIds->first();
     }
 
     /**
@@ -534,12 +545,12 @@ class OdooClient
      *
      * @param array $externalIds each either "name" or "module.name"
      * @param string $module optional, but recommended
-     * @return int|null
+     * @return collection
      *
      * FIXME: all external IDs must have the same "module" at the moment.
      */
     public function getResourceIds(
-        array $externalIds,
+        iterable $externalIds,
         string $model = null,
         $offset = 0,
         $limit = self::DEFAULT_LIMIT,
@@ -584,7 +595,7 @@ class OdooClient
             $criteria[] = ['name', 'in', $externalIds];
         }
 
-        $irModelDataIds = $this->searchArray(
+        $irModelDataIds = $this->search(
             'ir.model.data',
             $criteria,
             $offset,
@@ -594,26 +605,81 @@ class OdooClient
 
         if (empty($irModelDataIds)) {
             // No matches found, so give up now.
-            return;
+
+            return collect();
         }
 
         // Now read the full records to get the resource IDs.
 
-        $irModelDataArray = $this->readArray(
+        $irModelData = $this->read(
             'ir.model.data',
             $irModelDataIds
         );
-        $irModelData = collect($irModelDataArray);
 
         if ($irModelData === null) {
             // We could not find the record.
             // (We really should have, since we just looked it up)
-            return;
+
+            return collect();
         }
 
         // Return the resource IDs.
 
-        return $irModelData->pluck('res_id')->toArray();
+        return $irModelData->map(function ($item) {
+            return $item->get('res_id');
+        });
+    }
+
+    /**
+     * Map the model name (e.g. "res.partner") to the model class
+     * it will be instantiated into.
+     * TODO: turn this into a factory that can be injected,
+     */
+    protected function mapModelName(string $modelName)
+    {
+        if (array_key_exists($modelName, $this->modelMapping)) {
+            return $this->modelMapping[$modelName];
+        }
+
+        // Default fallback.
+
+        return Model::class;
+    }
+
+    /**
+     * Add multiple module name to model class mapping entries.
+     */
+    public function addModelMap(array $modelMap)
+    {
+        foreach ($modelMap as $modelName => $className) {
+            $this->addModelMapping($modelName, $className);
+        }
+
+        return $this;
+    }
+
+    /**
+     * Add a single module name to model class mapping entry
+     */
+    public function addModelMapping(string $modelName, string $className = null)
+    {
+        if ($className !== null) {
+            $this->modelMapping[$modelName] = $className;
+        } else {
+            $this->removeModelMapping($modelName);
+        }
+
+        return $this;
+    }
+
+    /**
+     * Remove a module name to model class mapping entry.
+     */
+    public function removeModelMapping(string $modelName)
+    {
+        unset($this->modelMapping[$modelName]);
+
+        return $this;
     }
 
     /**
@@ -653,7 +719,7 @@ class OdooClient
     {
         // If a scalar, then map to the appropriate object.
 
-        if (! is_array($item)) {
+        if (! is_iterable($item)) {
             if (gettype($item) === 'integer') {
                 return $this->intValue($item);
             } elseif (gettype($item) === 'string') {
@@ -676,7 +742,7 @@ class OdooClient
             }
         }
 
-        // If an array, then deal with the children first.
+        // If an iterable, then deal with the children first.
 
         foreach ($item as $key => $element) {
             $item[$key] = $this->nativeToValue($element);
@@ -685,7 +751,10 @@ class OdooClient
         // Map to an array or a struct, depending on whether a numeric
         // keyed array or an associative array is to be encoded.
 
-        if ($item === [] || array_keys($item) === range(0, count($item) - 1)) {
+        if ($item === []
+            || (is_array($item) && array_keys($item) === range(0, count($item) - 1))
+            || (is_iterable($item) && ! is_array($item))
+        ) {
             return $this->arrayValue($item);
         } else {
             return $this->structValue($item);

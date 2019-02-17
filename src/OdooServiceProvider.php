@@ -44,18 +44,7 @@ class OdooServiceProvider extends BaseServiceProvider
 
         $this->app->singleton(static::PROVIDES, function ($app) {
             $odooService = new OdooService();
-/*
-            $odooApi->setClientParams(
-                config('opwall-reports.openerp.url'),
-                config('opwall-reports.openerp.port')
-            );
 
-            $odooApi->getConnection(
-                config('opwall-reports.openerp.database'),
-                config('opwall-reports.openerp.username'),
-                config('opwall-reports.openerp.password')
-            );
-*/
             return $odooService;
         });
     }

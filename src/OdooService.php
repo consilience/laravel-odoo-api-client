@@ -32,6 +32,20 @@ class OdooService
 
         $config = config('odoo-api.connections.' . $configName);
 
-        return $this->clients[$configName] = new OdooClient($config);
+        $client = $this->clients[$configName] = new OdooClient($config);
+
+        // Start with the top level mappings.
+
+        $modelMap = config('odoo-api.model_map', []);
+
+        $client->addModelMap($modelMap);
+
+        // Override with any mappings specific for the connection.
+
+        $modelMap = config('odoo-api.connections.' . $configName . '.model_map', []);
+
+        $client->addModelMap($modelMap);
+
+        return $client;
     }
 }

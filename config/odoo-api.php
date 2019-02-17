@@ -14,6 +14,15 @@ return [
             'database' => env('ODOO_API_DATABASE'),
             'username' => env('ODOO_API_USER'),
             'password' => env('ODOO_API_PASSWORD'),
+
+            'model_map' => [
+            ],
         ],
+    ],
+
+    // Map OpenERP model names to local model classes.
+
+    'model_map' => [
+        //'account.invoice' => Foo\Bar\Invoice::class,
     ],
 ];

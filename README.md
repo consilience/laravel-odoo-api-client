@@ -84,24 +84,26 @@ where `$type` will typically be 'db', 'common' or 'object'.
 
 # Query methods
 
-The following methods are supported and will return an XML-RPC response:
+The following methods are supported and will return a collection:
 
-* search()
-* searchRead()
-* read()
+* search() - collection of integers
+* searchRead() - collection of models
+* read() - collection of models
+* getResourceIds - collection of integers
+* fieldsGet() - collection of arrays
 
 The following helper functions return a native PHP type insead:
 
-* searchArray - array
-* searchReadArray - array
-* readArray - array
 * searchCount - integer
 * getResourceId - integer
-* getResourceIds - array
+* unlink - boolean
+* create - boolean
 
-(I'm torn between this approach and a more fluent approach such as
-`$client->firstOnly()->asArray()->read(...)` to set the context that
-will apply to the next command.)
+All `read()` and `searchRead()` methods will return a collection of models.
+The default model will be `Consilience\OdooApi\Model`, but other models can be specified.
+The `odoo-api.php` config provides an array setting to map OpenERP model names
+to model class names for instantiation. Further mappings can be added to the client
+using `$client->addMapping('odoo.model.name', \FQDN\Class\name::class)`.
 
 Note that `searchRead` will emulate the server's `search_read` for
 Odoo versions less than 8.0 (OpenERP) but use the native `search_read`
@@ -122,6 +124,10 @@ formats are used:
 
 This makes finding help on the API difficult, since many articles
 fail to make the OpenERP/Odoo version number clear.
+
+# Setting Relationships
+
+TODO (it's fairly simple once explained)
 
 # TODO
 
