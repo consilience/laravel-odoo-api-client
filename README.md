@@ -127,11 +127,19 @@ fail to make the OpenERP/Odoo version number clear.
 
 # Setting Relationships
 
-TODO (it's fairly simple once explained)
+There are helpers to create the relationships data.
+Just a simple example, replacing all invoices belonging to a
+partner witn a new set of invoices:
 
-# TODO
+```php
+$invoiceIds = ... // array or collection of resource IDs for the invoices to link
 
-* Examples on how relationships are managed are needed, since they are
-  one of the areas that cause the most confusion. It's actuall pretty
-  easy once you see the technique, though a helper may be useful to
-  put together the data structure needed.
+$response = $client->write(
+    'res.partner',
+    $partnerResourceId,
+    [
+        'invoice_ids' => $client->relationReplaceAllLinks($invoiceIds),
+        // other optional fields and relations can be set here too
+    ]
+);
+```
