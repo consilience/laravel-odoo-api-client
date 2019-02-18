@@ -83,7 +83,7 @@ $client->read('res.partner', [17858, 17852])->value()->me['array']
 ```
 
 If you have specific requirements for the XML-RPC client, such as an SSL
-certificate to add, then yiu can get the client instance using:
+certificate to add, then you can get the client instance using:
 
     $xmlRpcClient = $client->getXmlRpcClient($type);
 
@@ -93,7 +93,7 @@ You have the ability to construct your own messages from scratch like this,
 and there are helper methods in the `$client` to convert native PHP data types
 to and from XML RPC value objects.
 However, you should be able to leave all that conversion to be handled in the
-background by the client - just give it array/string/in/etc. data and get
+background by the client - just give it array/string/int/etc. data and get
 models and arrays back.
 
 # Query methods
@@ -160,7 +160,7 @@ $response = $client->write(
 
 # TODO
 
-* Conversion of date types has not been tested.
+* Conversion of `date` types have not been tested.
   Ideally we would support Carbon 2 for sending dates in and getting
   dates back out again.
 * Tests. It's always the tests that get left behind when time gets in
@@ -169,4 +169,10 @@ $response = $client->write(
 * Would be nice to split this up into a non-laravel package and then
   add a separate laravel wrapper for it. But collections are just too
   nice, so this may not happen.
+* Helper methods for some of the Odoo version specific data structures.
+  For example, specifying the list of fields to retrieve for a `read`
+  has new structures introduced for versions 7, 8 and 10.
+  The client class is also going to star getting a bit cumbersome at this
+  point, so moving some of the XML-RPC sepcific stuff (message creation, data
+  conversion) would be best moved to a separate connction class).
 
