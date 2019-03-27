@@ -805,7 +805,7 @@ class OdooClient
      *
      * @return array
      */
-    public function relationReplaceAllLinks(iterator $resourceIds)
+    public function relationReplaceAllLinks(iterable $resourceIds)
     {
         return [[
             static::RELATION_REPLACE_ALL_LINKS, 0, $resourceIds
