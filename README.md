@@ -106,12 +106,13 @@ The following methods are supported and will return a collection:
 * getResourceIds - collection of integers
 * fieldsGet() - collection of arrays
 
-The following helper functions return a native PHP type insead:
+The following helper functions return a native PHP type instead:
 
 * searchCount - integer
 * getResourceId - integer
 * unlink - boolean
 * create - integer
+* write - boolean
 
 All `read()` and `searchRead()` methods will return a collection of models.
 The default model will be `Consilience\OdooApi\Model`, but other models can be specified.
@@ -129,7 +130,7 @@ The `read()` method takes an options array that varies significantly
 between OpenERP/Odoo versions.
 This package does not attempt to deal with that at this time.
 
-Fpor example, to restrict the read to named attributes, the following
+For example, to restrict the read to named attributes, the following
 formats are used:
 
 * OpenERP 7: $client->read('account.invoice', [123], ['type', 'partner_id']);
@@ -153,10 +154,91 @@ $response = $client->write(
     $partnerResourceId,
     [
         'invoice_ids' => $client->relationReplaceAllLinks($invoiceIds),
-        // other optional fields and relations can be set here too
+        
+        // other optional fields and relations can be set here as nornmal
     ]
 );
 ```
+
+The general way to set a relationship is to set the relation (`invoice_ids` in this
+case) to a data structure which contains a list of IDs and instructions on
+what to do with those IDs.
+
+The `relationReplaceAllLinks()` here generates the data structure to instruct Odoo
+to replace all links between the `res.partner` and any invoices they have, with
+the new list of `$invoiceIds` (an array).
+You can construct those data structures yourself, or use the following helpers:
+
+```php
+// Relate a resource.
+$client->relationCreate(array $resourceIds)
+
+// Update a related resource.
+// e.g. change the product on an invoice line for an invoice
+relationUpdate(int $resourceId, array $values)
+
+// Delete a related resource completely.
+// e.g. delete an invoice line on an invoice
+relationDelete(int $resourceId)
+
+// Remove the relation to a related resource, but leave the resource intact.
+// e.g. remove an invoice from a contact so it can be adde to a new contact
+relationRemoveLink(int $resourceId)
+
+// Add a resource to a relation, leaving existing relations intact.
+// e.g. add an additional line to an invoice. 
+relationAddLink(int $resourceId)
+
+// Remove all relations to a resource type.
+// e.g. remove all invoices from a contact, before the contatc can is deleted.
+relationRemoveAllLinks()
+
+// Replace all relations with a new set of relations.
+// e.g. remove all invoices from contact, and give them a new bunch of invoices
+// to be responsible for. 
+relationReplaceAllLinks(iterable $resourceIds)
+``` 
+
+# Non-CRUD Requests
+
+There are helper functions to provide `read`, `write`, `unlink`, `search` functionality,
+but you also have access to other API methods at a lower level.
+For example, a note can be added to a sales invoice using the `message_post` function
+for a sales order.
+The example below shows how.
+
+```php
+use OdooApi;
+
+$client = OdooApi::getClient();
+
+// Resource and action, the remote RPC function.
+// Note that the message_post() function for each resource type is
+// different, i.e. this is not something that can be genereralised
+// in the API.
+// This starts to build the request message and addes the first
+// few positional parameters and authentication details.
+
+$msg = $client->getBaseObjectRequest('sale.order', 'message_post');
+
+// Further positional parameters.
+// This is for an Odoo 7.0 installation. Other versions may differ.
+
+$msg->addParam($client->nativeToValue([$orderId])); // Resource(s) ID
+$msg->addParam($client->nativeToValue($text_message)); // Body
+$msg->addParam($client->nativeToValue(false)); // Subject
+$msg->addParam($client->nativeToValue('comment')); // Subtype
+$msg->addParam($client->nativeToValue(false)); // Partner IDs to send a copy to
+
+// Send the message.
+
+$response = $client->getXmlRpcClient('object')->send($msg);
+
+// If you want to inspect the result, then this will give you
+// what the Odoo message_post() function returns.
+
+$result = $client->valueToNative($response->value());
+``` 
 
 # TODO
 
@@ -173,6 +255,6 @@ $response = $client->write(
   For example, specifying the list of fields to retrieve for a `read`
   has new structures introduced for versions 7, 8 and 10.
   The client class is also going to star getting a bit cumbersome at this
-  point, so moving some of the XML-RPC sepcific stuff (message creation, data
-  conversion) would be best moved to a separate connction class).
-
+  point, so moving some of the XML-RPC specific stuff (message creation, data
+  conversion) would be best moved to a separate connection class).
+* Positional parameter builder helper.
