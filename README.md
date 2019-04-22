@@ -250,8 +250,8 @@ The loader uses `id` as the external ID.
 It will find the resource if it already exists and update it,
 otherwise it will create the resource if it does not exist.
 
-Each resource in the list can be specified with different
-fields, but all must be for the same resporce model.
+Each resource in the list can be specified with different fields,
+but all must be for the same resource model.
 
 ```php
     // Load one or more partners.
@@ -324,7 +324,7 @@ prevent records loading from another group, so the result
 can be a mix of failed and loaded records.
 
 An exception will be thrown on unrecoverable errors in Odoo,
-such as a database integrity constraint violcation.
+such as a database integrity constraint violation.
 
 The `loadOne()` method works in a similar way,
 but accepts just one record to load.
