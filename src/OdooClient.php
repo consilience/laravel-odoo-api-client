@@ -303,7 +303,7 @@ class OdooClient
 
         $this->response = $this->getXmlRpcClient(static::API_TYPE_OBJECT)->send($msg);
 
-        return $this->valueToNative();
+        return $this->responseAsNative();
     }
 
     /**
