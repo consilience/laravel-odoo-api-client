@@ -45,6 +45,11 @@ trait HasModelDataTrait
         return data_get($this->data, $key, $default);
     }
 
+    public function __get($name)
+    {
+        return $this->get($name);
+    }
+
     public function jsonSerialize()
     {
         return $this->data;

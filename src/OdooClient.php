@@ -265,7 +265,7 @@ class OdooClient
      * @param int $offset
      * @param int $limit
      * @param string $order comma-separated list of fields
-     * @return Response
+     * @return mixed
      */
     public function search(
         string $modelName,
@@ -916,6 +916,16 @@ class OdooClient
         }
 
         // If an iterable, then deal with the children first.
+
+        // Clone the item if it is an object.
+        // If we don't, then collections get changed in-situ, i.e. your
+        // collection of IDs submitted for the criteria is converted to
+        // XML-RPC Value objects.
+        // Arrays are automatically cloned by PHP on first change.
+
+        if (is_object($item)) {
+            $item = clone($item);
+        }
 
         foreach ($item as $key => $element) {
             $item[$key] = $this->nativeToValue($element);
