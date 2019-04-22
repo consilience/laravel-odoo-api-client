@@ -66,6 +66,10 @@ class OdooClient
     // (6, _, ids)
     const RELATION_REPLACE_ALL_LINKS = 6;
 
+    const API_TYPE_COMMON = 'common';
+    const API_TYPE_OBJECT = 'object';
+    const API_TYPE_DB = 'db';
+
     /**
      * Later versions of the API include a version number e.g. /xmlrpc/2/
      */
@@ -162,7 +166,7 @@ class OdooClient
 
         // Fetch the user ID from the server.
 
-        $xmlRpcClient = $this->getXmlRpcClient('common');
+        $xmlRpcClient = $this->getXmlRpcClient(static::API_TYPE_COMMON);
 
         // Build login parameters array.
 
@@ -278,7 +282,7 @@ class OdooClient
         $msg->addParam($this->intValue($limit));
         $msg->addParam($this->stringValue($order));
 
-        $this->response = $this->getXmlRpcClient('object')->send($msg);
+        $this->response = $this->getXmlRpcClient(static::API_TYPE_OBJECT)->send($msg);
 
         return collect($this->responseAsNative());
     }
@@ -297,7 +301,7 @@ class OdooClient
 
         $msg->addParam($this->nativeToValue($criteria));
 
-        $this->response = $this->getXmlRpcClient('object')->send($msg);
+        $this->response = $this->getXmlRpcClient(static::API_TYPE_OBJECT)->send($msg);
 
         return $this->valueToNative();
     }
@@ -314,7 +318,7 @@ class OdooClient
         $order = ''
     ) {
         if (version_compare('8.0', $this->serverVersion) === 1) {
-            // Less than Odoo 8.0, so search_read is not supported.
+            // For less than Odoo 8.0, search_read is not supported.
             // However, we will emulate it.
 
             $ids = $this->search(
@@ -335,38 +339,20 @@ class OdooClient
             $msg->addParam($this->intValue($limit));
             $msg->addParam($this->stringValue($order));
 
-            $this->response = $this->getXmlRpcClient('object')->send($msg);
+            $this->response = $this->getXmlRpcClient(static::API_TYPE_OBJECT)->send($msg);
+
+            // FIXME: these need to be mapped onto models instead of
+            // being returned as native arrays.
+
+            return $this->responseAsNative();
         }
-
-        return $this->response;
-    }
-
-    /**
-     * Same as searchRead but returning a native PHP array.
-     */
-    public function searchReadArray(
-        string $modelName,
-        array $criteria = [],
-        $offset = 0,
-        $limit = self::DEFAULT_LIMIT,
-        $order = ''
-    ) {
-        $this->response = $this->searchRead(
-            $modelName,
-            $criteria,
-            $offset,
-            $limit,
-            $order
-        );
-
-        return $this->responseAsNative();
     }
 
     /**
      * @param string $modelName example res.partner
      * @param array $instanceIds list of model instance IDs to read and return
      * @param array $options varies with API versions see documentation
-     * @return Response
+     * @return Collection of ModelInterface
      */
     public function read(
         string $modelName,
@@ -381,7 +367,7 @@ class OdooClient
             $msg->addParam($this->nativeToValue($options));
         }
 
-        $this->response = $this->getXmlRpcClient('object')->send($msg);
+        $this->response = $this->getXmlRpcClient(static::API_TYPE_OBJECT)->send($msg);
 
         $data = $this->responseAsNative();
 
@@ -401,7 +387,7 @@ class OdooClient
     {
         $msg = new Request('version');
 
-        $this->response = $this->getXmlRpcClient('common')->send($msg);
+        $this->response = $this->getXmlRpcClient(static::API_TYPE_COMMON)->send($msg);
 
         return $this->responseAsNative();
     }
@@ -417,7 +403,7 @@ class OdooClient
 
         $msg->addParam($this->nativeToValue($fields));
 
-        $this->response = $this->getXmlRpcClient('object')->send($msg);
+        $this->response = $this->getXmlRpcClient(static::API_TYPE_OBJECT)->send($msg);
 
         return $this->responseAsNative();
     }
@@ -434,7 +420,7 @@ class OdooClient
         $msg->addParam($this->nativeToValue([$resourceId]));
         $msg->addParam($this->nativeToValue($fields));
 
-        $this->response = $this->getXmlRpcClient('object')->send($msg);
+        $this->response = $this->getXmlRpcClient(static::API_TYPE_OBJECT)->send($msg);
 
         return $this->responseAsNative();
     }
@@ -450,7 +436,7 @@ class OdooClient
 
         $msg->addParam($this->nativeToValue([$resourceId]));
 
-        $this->response = $this->getXmlRpcClient('object')->send($msg);
+        $this->response = $this->getXmlRpcClient(static::API_TYPE_OBJECT)->send($msg);
 
         return $this->responseAsNative();
     }
@@ -465,7 +451,7 @@ class OdooClient
     {
         $msg = $this->getBaseObjectRequest($modelName, 'fields_get');
 
-        $this->response = $this->getXmlRpcClient('object')->send($msg);
+        $this->response = $this->getXmlRpcClient(static::API_TYPE_OBJECT)->send($msg);
 
         return $this->responseAsNative();
     }
@@ -625,7 +611,7 @@ class OdooClient
             $msg->addParam($this->nativeToValue($group['keys']));
             $msg->addParam($this->nativeToValue($group['records']));
 
-            $this->response = $this->getXmlRpcClient('object')->send($msg);
+            $this->response = $this->getXmlRpcClient(static::API_TYPE_OBJECT)->send($msg);
 
             $groupResult = $this->responseAsNative();
 

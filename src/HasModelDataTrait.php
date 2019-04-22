@@ -49,4 +49,36 @@ trait HasModelDataTrait
     {
         return $this->data;
     }
+
+    /**
+     * Supports ArrayAccess
+     */
+    public function offsetExists($offset): bool
+    {
+        return $this->get($offset) !== null;
+    }
+
+    /**
+     * Supports ArrayAccess
+     */
+    public function offsetGet($offset)
+    {
+        return $this->get($offset);
+    }
+
+    /**
+     * Supports ArrayAccess
+     */
+    public function offsetSet($offset, $value): void
+    {
+        data_set($this->data, $offset, $value);
+    }
+
+    /**
+     * Supports ArrayAccess
+     */
+    public function offsetUnset($offset): void
+    {
+        $this->offsetSet($offset, null);
+    }
 }

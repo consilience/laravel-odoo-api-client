@@ -7,8 +7,9 @@ namespace Consilience\OdooApi;
  */
 
 use JsonSerializable;
+use ArrayAccess;
 
-interface ModelInterface extends JsonSerializable
+interface ModelInterface extends JsonSerializable, ArrayAccess
 {
     /**
      * Get a model instance data item, using "dot" notation.
