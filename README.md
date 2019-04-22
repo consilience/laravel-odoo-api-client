@@ -9,6 +9,12 @@ OpenERP/Odoo XML-RPC API from within Laravel.
 Just set up some config, get a client from the `OdooApi`
 facade, and throw it some data.
 
+Ideally this would be in two parts: an API package and the
+Laravel wrapper.
+That can still be done later, but for now this meets our
+requirements and some helpers provided by laravel make things
+run a lot smoother (collections, array/object dot-notation access).
+
 # Installation
 
 Through composer:
