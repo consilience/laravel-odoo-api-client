@@ -191,7 +191,7 @@ class OdooClient
 
         // Grab the User ID.
 
-        $this->userId = $this->valueToNative($this->response->value());
+        $this->userId = $this->responseAsNative();
 
         // Get the server version for capabilities.
 
@@ -280,17 +280,7 @@ class OdooClient
 
         $this->response = $this->getXmlRpcClient('object')->send($msg);
 
-        if ($this->response->value() instanceof Value) {
-            return collect($this->valueToNative($this->response->value()));
-        }
-
-        // An error in the criteria or model provided.
-
-        throw new Exception(sprintf(
-            'Failed to search model %s; response was "%s"',
-            $modelName,
-            $this->response->value()
-        ));
+        return collect($this->responseAsNative());
     }
 
     /**
@@ -309,7 +299,7 @@ class OdooClient
 
         $this->response = $this->getXmlRpcClient('object')->send($msg);
 
-        return $this->valueToNative($this->response->value());
+        return $this->valueToNative();
     }
 
     /**
@@ -369,7 +359,7 @@ class OdooClient
             $order
         );
 
-        return $this->valueToNative($this->response->value());
+        return $this->responseAsNative();
     }
 
     /**
@@ -393,23 +383,13 @@ class OdooClient
 
         $this->response = $this->getXmlRpcClient('object')->send($msg);
 
-        if ($this->response->value() instanceof Value) {
-            $data = $this->valueToNative($this->response->value());
+        $data = $this->responseAsNative();
 
-            $modelName = $this->mapModelName($modelName);
+        $modelName = $this->mapModelName($modelName);
 
-            return collect($data)->map(function ($item) use ($modelName) {
-                return new $modelName($item);
-            });
-        }
-
-        // An error in the instanceIds or model provided.
-
-        throw new Exception(sprintf(
-            'Failed to read model %s; response was "%s"',
-            $modelName,
-            $this->response->value()
-        ));
+        return collect($data)->map(function ($item) use ($modelName) {
+            return new $modelName($item);
+        });
     }
 
     /**
@@ -423,7 +403,7 @@ class OdooClient
 
         $this->response = $this->getXmlRpcClient('common')->send($msg);
 
-        return $this->valueToNative($this->response->value());
+        return $this->responseAsNative();
     }
 
     /**
@@ -439,13 +419,7 @@ class OdooClient
 
         $this->response = $this->getXmlRpcClient('object')->send($msg);
 
-        // If there was an error, then an integer will be returned.
-
-        if (! $this->response->value() instanceof Value) {
-            return $this->response->value();
-        }
-
-        return $this->valueToNative($this->response->value());
+        return $this->responseAsNative();
     }
 
     /**
@@ -462,13 +436,7 @@ class OdooClient
 
         $this->response = $this->getXmlRpcClient('object')->send($msg);
 
-        // If there was an error, then an integer will be returned.
-
-        if (! $this->response->value() instanceof Value) {
-            return $this->response->value();
-        }
-
-        return $this->valueToNative($this->response->value());
+        return $this->responseAsNative();
     }
 
     /**
@@ -484,13 +452,7 @@ class OdooClient
 
         $this->response = $this->getXmlRpcClient('object')->send($msg);
 
-        // If there was an error, then an integer will be returned.
-
-        if (! $this->response->value() instanceof Value) {
-            return $this->response->value();
-        }
-
-        return $this->valueToNative($this->response->value());
+        return $this->responseAsNative();
     }
 
     /**
@@ -505,13 +467,7 @@ class OdooClient
 
         $this->response = $this->getXmlRpcClient('object')->send($msg);
 
-        // If there was an error, then an integer will be returned.
-
-        if (! $this->response->value() instanceof Value) {
-            return $this->response->value();
-        }
-
-        return $this->valueToNative($this->response->value());
+        return $this->responseAsNative();
     }
 
     /**
@@ -539,6 +495,7 @@ class OdooClient
      * @return collection
      *
      * FIXME: all external IDs must have the same "module" at the moment.
+     * Will fix this later if needed and if I can find sufficient documentaion.
      */
     public function getResourceIds(
         iterable $externalIds,
@@ -622,9 +579,131 @@ class OdooClient
     }
 
     /**
+     * Use the load() method to load resources to Odoo.
+     * Uses the external ID to identify resources, so it is able
+     * to create or update resources as necessary.
+     *
+     * @param string $modelName
+     * @param iterable $records list of key->value records to load
+     * @return array of two collections - 'ids' and 'messages'
+     */
+    public function load(string $modelName, iterable $records)
+    {
+        // All records loaded in one go must have the same set of
+        // keys, so group the records into same-key groups.
+
+        $groups = [];
+
+        foreach ($records as $record) {
+            // Index each group by a hash of the keys.
+
+            $keysHash = md5(implode(':', array_keys($record)));
+
+            if (! array_key_exists($keysHash, $groups)) {
+                $groups[$keysHash] = [
+                    'keys' => array_keys($record),
+                    'records' => [],
+                ];
+            }
+
+            $groups[$keysHash]['records'][] = array_values($record);
+        }
+
+        // Now we can load each group in turn, collating the results.
+
+        $results = [
+            'messages' => [],
+            'ids' => [],
+        ];
+
+        $messages = collect();
+        $ids = collect();
+
+        foreach ($groups as $group) {
+            $msg = $this->getBaseObjectRequest($modelName, 'load');
+
+            $msg->addParam($this->nativeToValue($group['keys']));
+            $msg->addParam($this->nativeToValue($group['records']));
+
+            $this->response = $this->getXmlRpcClient('object')->send($msg);
+
+            $groupResult = $this->responseAsNative();
+
+            // Add in any ids (successfuly loaded) and messages (indicating
+            // unsuccessfuly loaded records).
+            // Arrays are not always returned, e.g. `false` so take care of that.
+
+            if (is_array($groupResult['ids'] ?? null)) {
+                $ids = $ids->merge($groupResult['ids']);
+            }
+
+            if (is_array($groupResult['messages'] ?? null)) {
+                $messages = $messages->merge($groupResult['messages']);
+            }
+        }
+
+        return [
+            'ids' => $ids,
+            'messages' => $messages,
+        ];
+    }
+
+    /**
+     * Use the load() method to load resources to Odoo.
+     * Uses the external ID to identify resources, so it is able
+     * to create or update resources as necessary.
+     *
+     * @param string $modelName
+     * @param array|mixed $record key->value record to load
+     * @return array of two values - 'id' and 'messages'
+     */
+    public function loadOne(string $modelName, $record)
+    {
+        $result = $this->load($modelName, [$record]);
+
+        return [
+            'id' => $result['ids']->first(),
+            'messages' => $result['messages'],
+        ];
+    }
+
+    /**
+     * Get the last response as a native PHP value.
+     *
+     * @param ?Response opional, defaulting to teh last response
+     * @return mixed
+     * @throws Exception if no payload could be decoded
+     */
+    public function responseAsNative(?Response $response = null)
+    {
+        if ($response === null) {
+            $response = $this->response;
+        }
+
+        if ($response === null) {
+            return $response;
+        }
+
+        if ($response->value() instanceof Value) {
+            return $this->valueToNative($response->value());
+        }
+
+        $errorMessage = sprintf(
+            'Unhandled Odoo API exception code %d: %s',
+            $response->faultCode(),
+            $response->faultString()
+        );
+
+        throw new Exception (
+            $errorMessage,
+            $response->faultCode()
+        );
+    }
+
+    /**
      * Map the model name (e.g. "res.partner") to the model class
      * it will be instantiated into.
-     * TODO: turn this into a factory that can be injected,
+     * TODO: turn this into a factory.
      */
     protected function mapModelName(string $modelName)
     {
@@ -812,13 +891,22 @@ class OdooClient
         ]];
     }
 
-
     /**
      * Walk through the criteria array and convert scalar values to
      * XML-RPC objects, and nested arrays to array and struct objects.
+     *
+     * @param mixed $item
+     * @return mixed
      */
     public function nativeToValue($item)
     {
+        // If already converted, then don't try to convert it again.
+        // Checked early as some Value types are also iterable.
+
+        if ($item instanceof Value) {
+            return $item;
+        }
+
         // If a scalar, then map to the appropriate object.
 
         if (! is_iterable($item)) {
@@ -832,9 +920,6 @@ class OdooClient
                 return $this->booleanValue($item);
             } elseif ($item === null) {
                 return $this->nullValue();
-            } elseif ($item instanceof Value) {
-                // Already mapped externaly to a Value object.
-                return $item;
             } else {
                 // No idea what it is, so don't know how to handle it.
                 throw new Exception(sprintf(
@@ -868,7 +953,7 @@ class OdooClient
      * Basically the reverse of nativeToValue().
      *
      * @param Value the object to convert, which may contain nested objects
-     * @returns mixed a null, an array, a scalar, and may be nested
+     * @return mixed a null, an array, a scalar, and may be nested
      */
     public function valueToNative(Value $value)
     {

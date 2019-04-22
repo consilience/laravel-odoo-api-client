@@ -238,7 +238,99 @@ $response = $client->getXmlRpcClient('object')->send($msg);
 // what the Odoo message_post() function returns.
 
 $result = $client->valueToNative($response->value());
-``` 
+```
+
+# Load Function
+
+Odoo offers a loader API that handles resource loading easily.
+This package offers the `load()` and `loadOne()` methods to
+access that API.
+
+The loader uses `id` as the external ID.
+It will find the resource if it already exists and update it,
+otherwise it will create the resource if it does not exist.
+
+Each resource in the list can be specified with different
+fields, but all must be for the same resporce model.
+
+```php
+    // Load one or more partners.
+
+    $loadResult = $client->load('res.partner', [
+        [
+            "name" => "JJ Test",
+            "active" => "TRUE",
+            "type" => "developer",
+            "id" => "external.partner_12345",
+        ],
+        // Further records for this model...
+    ]);
+```
+
+The response will be an array with two elements, `ids` and `messages`,
+both collections.
+
+The `ids` collection will contain the *internal* IDs of any resources updated
+or created.
+The `messages` collection will contain any validation errors for failed
+updates or resource creation.
+There may be multiple messages for a single failed record.
+
+```php
+// Example response with no errors and two resources updated or created.
+
+array:2 [
+  "ids" => Collection {
+    #items: array:2 [
+      0 => 7252
+      1 => 7251
+    ]
+  }
+  "messages" => Collection {
+    #items: []
+  }
+]
+
+// Example with oen validation error.
+// Note no records are loaded at all if any record fails validation.
+
+array:2 [
+  "ids" => Collection {
+    #items: []
+  }
+  "messages" => Collection {
+    #items: array:1 [
+      0 => array:5 [
+        "field" => "year"
+        "rows" => array:2 [
+          "to" => 1
+          "from" => 1
+        ]
+        "record" => 1
+        "message" => "'2019x' does not seem to be an integer for field 'My Year'"
+        "type" => "error"
+      ]
+    ]
+  }
+]
+```
+
+Although the record keys can vary between records,
+the Odoo API does not support that internally.
+This package works around that by grouping the records with
+identical keys and loading them in groups.
+This means that a validation error in one group will not
+prevent records loading from another group, so the result
+can be a mix of failed and loaded records.
+
+An exception will be thrown on unrecoverable errors in Odoo,
+such as a database integrity constraint violcation.
+
+The `loadOne()` method works in a similar way,
+but accepts just one record to load.
+It will return an `id` element with the integer `internal ID`
+or `null` if the record failed to load, along with a collection
+for the messages.
 
 # TODO
 
@@ -258,3 +350,4 @@ $result = $client->valueToNative($response->value());
   point, so moving some of the XML-RPC specific stuff (message creation, data
   conversion) would be best moved to a separate connection class).
 * Positional parameter builder helper.
+* Some more explicit exceptions.
