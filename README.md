@@ -121,8 +121,8 @@ The search term operators are:
 
 * =
 * !=
-* >
-* >=
+* \>
+* \>=
 * <
 * <=
 * like
