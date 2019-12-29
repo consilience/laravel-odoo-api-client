@@ -102,6 +102,62 @@ However, you should be able to leave all that conversion to be handled in the
 background by the client - just give it array/string/int/etc. data and get
 models and arrays back.
 
+# Search Criteria
+
+The search criteria is an array of search terms and logic operators,
+expressed in Polish Notation.
+
+The logic operators, for comparing search terms, are:
+
+* `&` - logical AND
+* `|` - logical OR
+* `!` - logical NOT
+
+Each search term is a tuple of the form:
+
+    [field_name, operator, value]
+    
+The search term operators are:
+
+* =
+* !=
+* >
+* >=
+* <
+* <=
+* like
+* ilike
+* in
+* not in
+* child_of
+* parent_left
+* parent_right
+
+Example: search for a record where the name is like 'Fred%' or 'Jane%'
+and the partner ID is 1 or 2, would look like this:
+
+```php
+[
+    '&',
+    '|',
+    ['name', 'like', 'Fred%'],
+    ['name', 'like', 'Jane%'],
+    ['partner_id', 'in', [1, 2]],
+]
+```
+
+The Polish Notation works inner-most to outer-most.
+The first `&` operator takes the next two terms and 'AND's them.
+The first of the two terms is a `|` operator.
+The `|` operator then takes the next two terms and 'OR`s them,
+making a single condition as a result, which is fed to the 'AND'.
+The final term is fed to the 'AND' condition.
+The result is equivalent to:
+
+```sql
+(name like 'Fred%' or 'Jane%') and partner_id in (1, 2)
+```
+
 # Query methods
 
 The following methods are supported and will return a collection:
