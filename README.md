@@ -68,11 +68,7 @@ $client = OdooApi::getClient();
 // ['name', $client->stringValue('ilike'), 'mich']
 
 $criteria = [
-    [
-        'name',
-        'ilike',
-        'mich'
-    ]
+    ['name', 'ilike', 'mich'],
 ];
 
 // First 10 matching IDs
@@ -129,7 +125,7 @@ The search term operators are:
 * ilike
 * in
 * not in
-* child_of
+* child_of - records who are children or grand-children of a given record,
 * parent_left
 * parent_right
 
@@ -155,7 +151,7 @@ The final term is fed to the 'AND' condition.
 The result is equivalent to:
 
 ```sql
-(name like 'Fred%' or 'Jane%') and partner_id in (1, 2)
+(name like 'Fred%' or name like 'Jane%') and partner_id in (1, 2)
 ```
 
 # Query methods
