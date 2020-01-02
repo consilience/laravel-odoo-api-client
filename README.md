@@ -2,6 +2,11 @@
 
 Tested against Laravel 5.7 and Odoo 7 _(OpenERP 7)_.
 
+[![Latest Stable Version](https://poser.pugx.org/consilience/laravel-odoo-api-client/v/stable)](https://packagist.org/packages/consilience/laravel-odoo-api-client)
+[![Total Downloads](https://poser.pugx.org/consilience/laravel-odoo-api-client/downloads)](https://packagist.org/packages/consilience/laravel-odoo-api-client)
+[![Latest Unstable Version](https://poser.pugx.org/consilience/laravel-odoo-api-client/v/unstable)](https://packagist.org/packages/consilience/laravel-odoo-api-client)
+[![License](https://poser.pugx.org/consilience/laravel-odoo-api-client/license)](https://packagist.org/packages/consilience/laravel-odoo-api-client)
+
 # Introduction
 
 The aim of this package is to provide easy access to the
